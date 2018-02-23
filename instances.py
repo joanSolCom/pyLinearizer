@@ -4,11 +4,28 @@ class Instances():
 
 	def __init__(self, conllStruct):
 		self.instance_list = []
+		self.posSet = set()
+		self.depSet = set()
+		self.dictPos = {}
+		self.dictDep = {}
 
 		for sentence in conllStruct.sentences:
-			self.instance_list.append(Instance(sentence))
+			iSent = Instance(sentence)
+			self.instance_list.append(iSent)
+			for token in sentence:
+				self.posSet.add(token.pos)
+				self.depSet.add(token.deprel)
 
-		self.padAtomicFeatures()
+		for idx, pos in enumerate(self.posSet):
+			self.dictPos[pos] = idx
+		for idx, dep in enumerate(self.depSet):
+			self.dictDep[dep] = idx
+
+		for inst in self.instance_list:
+			inst.dictDep = self.dictDep
+			inst.dictPos = self.dictPos
+			inst.computeAtomicFeatures()
+
 		self.padBigramFeatures()
 		self.padTrigramFeatures()
 		self.getFeatureVectors()
@@ -17,16 +34,6 @@ class Instances():
 		for instance in self.instance_list:
 			instance.getFeatureVectors()
 
-	def padAtomicFeatures(self):
-		maxNumChildren = -1
-		for inst in self.instance_list:
-			for node in inst.node_list:
-				numChildren = len(inst.getChildren(node))
-				if numChildren > maxNumChildren:
-					maxNumChildren = numChildren
-
-		for inst in self.instance_list:
-			inst.padAtomicFeatures(maxNumChildren)
 
 	def padBigramFeatures(self):
 		maxNumBigrams = -1
@@ -50,7 +57,6 @@ class Instances():
 		for inst in self.instance_list:
 			inst.padTrigramFeatures(maxNumTrigrams)
 	
-
 	def __iter__(self):
 		return iter(self.instance_list)
 
@@ -61,6 +67,8 @@ class Instance():
 		self.node_list = []
 		self.root = None
 		self.globalFeatures = None
+		self.dictPos = {}
+		self.dictDep = {}
 
 		for token in conllSentence:
 			if token.head == "0":
@@ -69,7 +77,6 @@ class Instance():
 			iNode = Node(token)
 			self.node_list.append(iNode)
 
-		self.computeAtomicFeatures()
 		self.computeGlobalFeatures()
 		self.computeBigramFeatures()
 		self.computeTrigramFeatures()
@@ -240,14 +247,31 @@ class Instance():
 				labels_children.append(child.conllLine.deprel)
 				pos_children.append(child.conllLine.pos)
 
-			iFeatures.addFeature("labels-children",labels_children)
-			iFeatures.addFeature("pos-children",pos_children)
+			# [numberNmods, numberPmods, .... totalNumberOfDeps] same with pos
+			lenPos = len(self.dictPos)
+			lenDep = len(self.dictDep)
+			i=0
+			j=0
+			posVector = []
+			depVector = []
+			while i<lenPos:
+				posVector.append(0)
+				i+=1
+			while j<lenDep:
+				depVector.append(0)
+				j+=1
 
+			for labelChild in labels_children:
+				position = self.dictDep[labelChild]
+				depVector[position]+=1
+
+			for posChild in pos_children:
+				position = self.dictPos[posChild]
+				posVector[position]+=1
+
+			iFeatures.addFeature("labels-children",depVector)
+			iFeatures.addFeature("pos-children",posVector)
 			node.atomicFeatures = iFeatures
-
-	def padAtomicFeatures(self, maxNumChildren):
-		for node in self.node_list:
-			node.padAtomicFeatures(maxNumChildren)
 
 	def padBigramFeatures(self, maxNumBigrams):
 		for node in self.node_list:
@@ -264,7 +288,6 @@ class Instance():
 				children.append(node)
 
 		return children
-
 
 	def getGrandChildren(self,parents):
 		grandChildren = []
@@ -286,10 +309,6 @@ class Node():
 		self.bigramFeatures = []
 		self.trigramFeatures = []
 		self.featureVector = []
-
-	def padAtomicFeatures(self, maxNumChildren):
-		self.atomicFeatures.padFeature("labels-children", maxNumChildren)
-		self.atomicFeatures.padFeature("pos-children", maxNumChildren)
 
 	def padBigramFeatures(self, maxNumBigrams):
 		lenBigrams = len(self.bigramFeatures)
