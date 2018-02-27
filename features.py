@@ -5,9 +5,18 @@ class Features():
 		self.featureList = []
 		self.featureDict = {}
 
-	def addFeature(self, name, value):
+	def addFeature(self, name, value, toOneHot=False):
 		self.featureList.append(Feature(name,value))
 		self.featureDict[name] = value
+
+	def getw2v(self, lemma):
+		pass
+
+	def getoovw2v(self, lemma):
+		pass
+
+	def strto1hot(self, posMapping, value):
+		pass
 
 	def getFeatureVector(self):
 		vector = []

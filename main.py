@@ -2,7 +2,7 @@ from conll import ConllStruct
 from instances import Instances
 
 def train():
-	pathTraining = "/home/joan/Escritorio/linearization-master/linearizer/CoNLL2009-ST-English-tiny.txt"
+	pathTraining = "/home/joan/Escritorio/linearization-master/linearizer/CoNLL2009-ST-English-train.1.txt"
 	rawConll = open(pathTraining,"r").read()
 	iConll = ConllStruct(rawConll)
 	iInstTraining = Instances(iConll)
